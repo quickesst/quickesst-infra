@@ -1,0 +1,23 @@
+# Kubernetes API audit policy.
+# Install as /etc/rancher/k3s/audit-policy.yaml (referenced by k3s/config.yaml).
+#
+# Metadata level: who did what, on which resource, when, with which result.
+# Request and response bodies are never logged, so Secret values never reach the audit log.
+apiVersion: audit.k8s.io/v1
+kind: Policy
+omitStages:
+  - RequestReceived
+rules:
+  # Skip high-volume, low-value read-only noise.
+  - level: None
+    nonResourceURLs:
+      - /healthz*
+      - /livez*
+      - /readyz*
+      - /version
+  - level: None
+    users:
+      - system:kube-proxy
+    verbs: ["watch"]
+  # Everything else, including access to Secrets, at metadata level.
+  - level: Metadata

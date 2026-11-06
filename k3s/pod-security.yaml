@@ -1,0 +1,27 @@
+# Pod Security Admission defaults.
+# Install as /etc/rancher/k3s/pod-security.yaml (referenced by k3s/config.yaml).
+#
+# - enforce baseline: blocks privileged pods, host namespaces and host paths everywhere.
+# - audit + warn restricted: flags pods that do not meet the strictest profile,
+#   so namespaces can be moved to "restricted" one by one with the namespace label
+#   pod-security.kubernetes.io/enforce=restricted.
+# - kube-system is exempt: Cilium needs privileged access to the node.
+apiVersion: apiserver.config.k8s.io/v1
+kind: AdmissionConfiguration
+plugins:
+  - name: PodSecurity
+    configuration:
+      apiVersion: pod-security.admission.config.k8s.io/v1
+      kind: PodSecurityConfiguration
+      defaults:
+        enforce: baseline
+        enforce-version: latest
+        audit: restricted
+        audit-version: latest
+        warn: restricted
+        warn-version: latest
+      exemptions:
+        usernames: []
+        runtimeClasses: []
+        namespaces:
+          - kube-system

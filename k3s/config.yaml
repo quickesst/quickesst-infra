@@ -1,0 +1,81 @@
+# k3s server configuration shared by self-managed clusters (dev and staging on the dedicated server).
+#
+# Install on the server BEFORE installing k3s:
+#   /etc/rancher/k3s/config.yaml        <- this file
+#   /etc/rancher/k3s/audit-policy.yaml  <- k3s/audit-policy.yaml
+#   /etc/rancher/k3s/pod-security.yaml  <- k3s/pod-security.yaml
+#   mkdir -p /var/lib/rancher/k3s/server/logs
+#
+# Kapsule (preprod, prod) does not use this file: the cluster is managed by Scaleway.
+
+# --- Access -----------------------------------------------------------------
+
+# Names and IPs used to reach the Kubernetes API (from your workstation and CI).
+# They are added to the API server certificate. Replace with your server's values.
+tls-san:
+  - dev.quickesst.example
+  - 203.0.113.10
+
+# The admin kubeconfig is readable by root only.
+write-kubeconfig-mode: "0600"
+
+# --- Networking -------------------------------------------------------------
+
+# Cilium is the CNI: disable the built-in Flannel and network policy controller.
+flannel-backend: none
+disable-network-policy: true
+
+# Explicit address ranges (k3s defaults), documented here to avoid overlaps
+# with other networks (VPN, Docker, future multi-provider nodes).
+cluster-cidr: 10.42.0.0/16
+service-cidr: 10.43.0.0/16
+
+# Traefik is deployed with Helm by Terraform, like on Kapsule, so that every
+# environment runs the same version and configuration. The bundled one is disabled.
+# servicelb (Klipper) is kept: it exposes the Traefik LoadBalancer Service on the node.
+disable:
+  - traefik
+
+# --- Datastore and backups --------------------------------------------------
+
+# Embedded etcd (instead of SQLite), required for scheduled snapshots.
+cluster-init: true
+
+# Snapshots of the cluster state every 6 hours, 28 kept (one week).
+# They are stored on the server itself (/var/lib/rancher/k3s/server/db/snapshots):
+# copy them off the server, or configure the etcd-s3 options with credentials
+# provided outside this file.
+etcd-snapshot-schedule-cron: "0 */6 * * *"
+etcd-snapshot-retention: 28
+
+# --- Security ---------------------------------------------------------------
+
+# Encrypt Kubernetes Secrets at rest in the datastore.
+secrets-encryption: true
+
+# Refuse to start if the kernel settings differ from what the kubelet expects.
+# Prerequisite (sysctl, persisted on the server):
+#   vm.panic_on_oom=0
+#   vm.overcommit_memory=1
+#   kernel.panic=10
+#   kernel.panic_on_oops=1
+protect-kernel-defaults: true
+
+kube-apiserver-arg:
+  # Audit log of every API request (metadata only, no request bodies).
+  - audit-policy-file=/etc/rancher/k3s/audit-policy.yaml
+  - audit-log-path=/var/lib/rancher/k3s/server/logs/audit.log
+  - audit-log-maxage=30
+  - audit-log-maxbackup=10
+  - audit-log-maxsize=100
+  # Pod Security Admission defaults for every namespace.
+  - admission-control-config-file=/etc/rancher/k3s/pod-security.yaml
+
+kube-controller-manager-arg:
+  # Clean up terminated pods quickly.
+  - terminated-pod-gc-threshold=10
+
+kubelet-arg:
+  # Close idle exec/attach/port-forward streams.
+  - streaming-connection-idle-timeout=5m
+  - make-iptables-util-chains=true

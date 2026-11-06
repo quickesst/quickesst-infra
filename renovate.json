@@ -1,0 +1,45 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "timezone": "Europe/Paris",
+  "labels": ["dependencies"],
+  "dependencyDashboard": true,
+  "minimumReleaseAge": "7 days",
+  "internalChecksFilter": "strict",
+  "automerge": false,
+  "nix": {
+    "enabled": true
+  },
+  "pre-commit": {
+    "enabled": true
+  },
+  "packageRules": [
+    {
+      "description": "Major updates require explicit approval from the dependency dashboard",
+      "matchUpdateTypes": ["major"],
+      "dependencyDashboardApproval": true,
+      "labels": ["dependencies", "major"]
+    },
+    {
+      "description": "Critical components: longer release age, never merged automatically",
+      "matchDepNames": [
+        "cilium",
+        "cert-manager",
+        "cloudnative-pg",
+        "plugin-barman-cloud",
+        "zitadel",
+        "vault"
+      ],
+      "minimumReleaseAge": "14 days",
+      "automerge": false,
+      "labels": ["dependencies", "critical"]
+    },
+    {
+      "description": "Group minor and patch updates of Terraform providers",
+      "matchManagers": ["terraform"],
+      "matchDepTypes": ["provider", "required_provider"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "terraform providers"
+    }
+  ]
+}
