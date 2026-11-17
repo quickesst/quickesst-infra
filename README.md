@@ -49,23 +49,23 @@ A later move to **Scaleway Kosmos** (multi-provider nodes) is planned for resili
 
 ## Repository structure
 
-The Terraform code and its deployment tasks are added topic by topic (see [Roadmap](#roadmap)). Entries marked *(planned)* are not in the repository yet.
+The Terraform code and its deployment tasks are added topic by topic (see [Roadmap](#roadmap)). Entries marked *(planned)* are not implemented yet.
 
 ```
-main.tf                          # (planned) root module: providers and module composition
-modules/                         # (planned)
-  platform/                      # cert-manager, Cilium (self-managed clusters only)
+main.tf                          # root module: providers and module composition
+modules/
+  platform/                      # (planned) cert-manager, Cilium (self-managed clusters only)
   postgres/                      # CloudNativePG operator, backup plugin, PostgreSQL instance
   database/                      # roles, credentials, pg_hba, databases
   zitadel/                       # Zitadel and its secrets
   backup/                        # object storage bucket, credentials, ObjectStore, scheduled backups
-scripts/                         # (planned)
+scripts/
   shipper/
     shipper-infra-deploy.yaml    # Task definitions for infrastructure deployment
-Taskfile.yml                     # (planned) Task entry point
+Taskfile.yml                     # Task entry point
 flake.nix                        # Nix development shell with pinned tooling
 flake.lock                       # exact versions of the Nix inputs (committed)
-.terraform.lock.hcl              # (planned) exact provider versions and checksums
+.terraform.lock.hcl              # exact provider versions and checksums
 .pre-commit-config.yaml          # pre-commit hooks (gitleaks)
 .env.example                     # required environment variables (no values)
 .gitignore                       # excludes secrets, Terraform state and local artefacts
@@ -75,6 +75,7 @@ k3s/                             # k3s server settings for self-managed clusters
   audit-policy.yaml              # Kubernetes API audit policy
   pod-security.yaml              # Pod Security Admission defaults
 renovate.json                    # dependency update policy (Renovate)
+AGENTS.md                        # instructions for AI coding agents working in this repository
 ```
 
 Each module has `development` and `production` variants selected from the current environment, sharing a `common` implementation.
@@ -115,7 +116,7 @@ platform (CNI, cert-manager)
 
    `.env` is loaded by Task and must never be committed. In CI, the same variables come from the CI secret store.
 
-2. Deploy (available once the Terraform modules and deployment tasks are merged):
+2. Deploy:
 
    ```bash
    task shipper:default
@@ -127,9 +128,9 @@ platform (CNI, cert-manager)
 
 - **Pinned versions** for every provider and Helm chart. `.terraform.lock.hcl` is committed. Do not run `terraform init -upgrade` routinely: updates go through Renovate pull requests.
 - **Dependency updates with [Renovate](https://docs.renovatebot.com):** Renovate watches Terraform providers, Helm chart versions, container images and the Nix flake inputs, and opens a pull request for each update. A **minimum release age** delays every update by a few days after its publication, so that broken or compromised releases are usually withdrawn before they reach this repository. Each pull request goes through the full CI pipeline; updates to critical components (PostgreSQL, CloudNativePG, Zitadel, Cilium, Vault) are never merged automatically.
-- Root modules pin exact provider versions; child modules only declare minimum versions.
+- Every provider used by a module, root or child, is declared in its `required_providers` with an exact version (no `~>`, `>=` or missing constraint), kept identical across modules.
 - **No secrets in code, plans or logs.** Generated secrets are alphanumeric and long (64 characters), which avoids escaping issues in connection strings, YAML and shells.
-- **Critical resources are protected** with `lifecycle { prevent_destroy = true }`: Zitadel masterkey, database role passwords, PostgreSQL cluster, backup bucket.
+- **Critical resources must be protected** with `lifecycle { prevent_destroy = true }`: Zitadel masterkey, database role passwords, PostgreSQL cluster, backup bucket. Only the Zitadel masterkey is protected so far; the others still need it.
 - **Plans are reviewed before apply** in preprod and prod. CI fails on any destroy or replacement of a protected resource.
 - One branch per topic, with a verifiable completion criterion in each ticket.
 
