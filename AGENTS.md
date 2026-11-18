@@ -29,6 +29,7 @@ flake.nix / flake.lock      # Nix dev shell with pinned tooling (terraform, kube
 .pre-commit-config.yaml     # gitleaks + Conventional Commits check on commit messages
 renovate.json               # dependency update policy
 .env.example                # required variables, no values
+CLAUDE.md                   # imports this file so that Claude Code loads it
 ```
 
 ## Module pattern
@@ -103,7 +104,7 @@ infra/
 - **One commit, one logical change.** Do not mix formatting with functional changes. `.terraform.lock.hcl` and `flake.lock` are committed together with the change that updated them.
 - **Hooks must pass.** Never use `--no-verify`. If gitleaks or the commit message check fails, fix the cause and propose the commit again.
 - **History:** never `--amend`, rebase or force push anything already pushed. Strict mode rejects merge and `fixup!` commits.
-- **Branches:** one branch per topic, named `<type>/<topic>` (for example `feat/zitadel`, `fix/provider-pinning`). No direct commits on `main`: changes reach it through a reviewed pull request. Single exception: the commit that introduces this file, together with the matching README update, goes directly on `main`, because these rules only apply once they are in the repository. That commit still needs the user's explicit yes.
+- **Branches:** one branch per topic, named `<type>/<topic>` (for example `feat/zitadel`, `fix/provider-pinning`). No direct commits on `main`: changes reach it through a reviewed pull request.
 - **Attribution:** a commit written by an agent ends with a `Co-Authored-By:` trailer naming the agent, so that its origin stays visible in the history.
 
 ## Long-running test suites and commands

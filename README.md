@@ -76,6 +76,7 @@ k3s/                             # k3s server settings for self-managed clusters
   pod-security.yaml              # Pod Security Admission defaults
 renovate.json                    # dependency update policy (Renovate)
 AGENTS.md                        # instructions for AI coding agents working in this repository
+CLAUDE.md                        # imports AGENTS.md so that Claude Code loads it
 ```
 
 Each module has `development` and `production` variants selected from the current environment, sharing a `common` implementation.
@@ -110,7 +111,7 @@ platform (CNI, cert-manager)
    ```
 
    | Variable | Used by |
-      |---|---|
+         |---|---|
    | `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | Terraform state backend (S3-compatible) |
    | `MINIO_USER` / `MINIO_PASSWORD` | MinIO provider (bucket and user management) |
 
