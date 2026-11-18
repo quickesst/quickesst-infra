@@ -1,0 +1,86 @@
+# Checks run on every pull request targeting main.
+#
+# These jobs run on GitHub Actions, which is subject to US jurisdiction. They therefore
+# only read code that is already public and use no secret: no Terraform backend, no
+# cloud or cluster credentials. Anything that needs credentials (terraform plan, apply,
+# cluster access) waits for the move to self-hosted Gitea Actions.
+
+name: PR checks
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, edited, reopened, synchronize]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-checks-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  pr-title:
+    name: PR title
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      # The title becomes the commit message on main (squash merge only), so it must
+      # follow the same Conventional Commits rules as the commit-msg hook.
+      - name: Check Conventional Commits format
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          pattern='^(feat|fix|chore|docs|refactor|ci|build|security)(\([a-z0-9-]+\))?!?: [a-z0-9`].*[^.]$'
+          if [[ ! "$TITLE" =~ $pattern ]]; then
+            echo "::error::PR title must be 'type(scope): subject' (Conventional Commits, lowercase subject, no trailing period)."
+            echo "Allowed types: feat, fix, chore, docs, refactor, ci, build, security."
+            echo "Got: $TITLE"
+            exit 1
+          fi
+          if (( ${#TITLE} > 72 )); then
+            echo "::error::PR title is ${#TITLE} characters long, 72 maximum."
+            exit 1
+          fi
+
+  terraform:
+    name: Terraform
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Same version as the Nix development shell (flake.lock).
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.16.5
+          terraform_wrapper: false
+
+      - name: Format
+        run: terraform fmt -check -recursive -diff
+
+      # -backend=false: no state backend and no credentials.
+      # -lockfile=readonly: fails if .terraform.lock.hcl is missing a provider.
+      - name: Init
+        if: hashFiles('*.tf') != ''
+        run: terraform init -backend=false -input=false -lockfile=readonly
+
+      - name: Validate
+        if: hashFiles('*.tf') != ''
+        run: terraform validate
+
+  secrets:
+    name: Secrets scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Runs the gitleaks hook from .pre-commit-config.yaml, so CI and local commits
+      # always use the same gitleaks version (updated by Renovate).
+      - name: gitleaks
+        run: pipx run pre-commit==4.7.0 run gitleaks --all-files --show-diff-on-failure

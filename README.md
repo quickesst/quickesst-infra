@@ -66,7 +66,10 @@ Taskfile.yml                     # Task entry point
 flake.nix                        # Nix development shell with pinned tooling
 flake.lock                       # exact versions of the Nix inputs (committed)
 .terraform.lock.hcl              # exact provider versions and checksums
-.pre-commit-config.yaml          # pre-commit hooks (gitleaks)
+.pre-commit-config.yaml          # pre-commit hooks (gitleaks, commit message check)
+.github/
+  pull_request_template.md       # description template for pull requests
+  workflows/pr-checks.yml        # CI on pull requests (no secrets, see Conventions)
 .env.example                     # required environment variables (no values)
 .gitignore                       # excludes secrets, Terraform state and local artefacts
 .envrc                           # direnv: loads the Nix development shell on entering the directory
@@ -132,8 +135,10 @@ platform (CNI, cert-manager)
 - Every provider used by a module, root or child, is declared in its `required_providers` with an exact version (no `~>`, `>=` or missing constraint), kept identical across modules.
 - **No secrets in code, plans or logs.** Generated secrets are alphanumeric and long (64 characters), which avoids escaping issues in connection strings, YAML and shells.
 - **Critical resources must be protected** with `lifecycle { prevent_destroy = true }`: Zitadel masterkey, database role passwords, PostgreSQL cluster, backup bucket. Only the Zitadel masterkey is protected so far; the others still need it.
-- **Plans are reviewed before apply** in preprod and prod. CI fails on any destroy or replacement of a protected resource.
+- **Plans are reviewed before apply** in preprod and prod. Target: CI fails on any destroy or replacement of a protected resource (not in place yet, it needs a plan in CI).
 - One branch per topic, with a verifiable completion criterion in each ticket.
+- **Pull requests** are merged into `main` with squash only: one pull request is one logical change and becomes one commit. The title follows Conventional Commits and the description follows `.github/pull_request_template.md`.
+- **CI:** the *PR checks* workflow runs on every pull request: PR title format, `terraform fmt`, `terraform validate` (without backend) and gitleaks. It runs on GitHub Actions, which is subject to US jurisdiction, so it uses **no secret** and only reads public code. Jobs that need credentials (plan, apply, cluster access) wait for the move to self-hosted Gitea Actions.
 
 ## Security
 

@@ -29,6 +29,9 @@ flake.nix / flake.lock      # Nix dev shell with pinned tooling (terraform, kube
 .pre-commit-config.yaml     # gitleaks + Conventional Commits check on commit messages
 renovate.json               # dependency update policy
 .env.example                # required variables, no values
+.github/
+  pull_request_template.md  # description template for every pull request
+  workflows/pr-checks.yml   # CI on pull requests: PR title, Terraform fmt/validate, gitleaks
 CLAUDE.md                   # imports this file so that Claude Code loads it
 ```
 
@@ -71,7 +74,7 @@ infra/
 - **Critical resources:** never remove or weaken `lifecycle { prevent_destroy = true }`, and never write a change that destroys or replaces a critical resource (Zitadel masterkey, role passwords, PostgreSQL cluster, backup bucket), whether or not it is already protected.
 - **Network:** only standard Kubernetes `NetworkPolicy`, default deny per namespace, explicit egress. Do not use Cilium-specific resources: the CNI will change when moving to Kosmos.
 - **Kubernetes manifests applied with `kubectl_manifest`** set an explicit `field_manager`.
-- **Language:** code, comments, documentation and commit messages in English.
+- **Language:** code, comments, documentation, commit messages and pull requests in English.
 - **Known pitfalls:** read README, *Known pitfalls*, before touching Zitadel, CloudNativePG or secrets. The most costly ones: the Zitadel config secret key is `config-yaml`, the masterkey must be exactly 32 characters and backed up, and a CloudNativePG `Database` resource silently recreates a dropped database empty.
 
 ## What an agent may do
@@ -91,20 +94,22 @@ infra/
 **Only after asking and receiving an explicit yes:**
 
 - `terraform init` with the backend, `plan` or `apply`, `task shipper:*`, and any `kubectl` or `helm` command that changes a cluster. A `plan` touches the remote state backend and real credentials.
-- Git operations that change the repository other than commits: `git rebase`, `git reset`, `git stash`, branch creation or deletion, tag. Commits and pushes follow *Commits*.
+- Git operations that change the repository other than commits: `git rebase`, `git reset`, `git stash`, branch creation or deletion, tag. Commits and pushes follow *Commits and pull requests*.
 
-**Never:** `-auto-approve` or `--force`. The other prohibitions are stated with the rule they protect, in *What this repository is*, *Writing code* and *Commits*.
+**Never:** `-auto-approve` or `--force`. The other prohibitions are stated with the rule they protect, in *What this repository is*, *Writing code* and *Commits and pull requests*.
 
-## Commits
+## Commits and pull requests
 
-- **Never commit or push without an explicit yes from the user.** Before committing, present the proposed commit: the branch, the exact list of files to stage and the full commit message. Commit only those files, with that message.
+- **Never commit, push or open a pull request without an explicit yes from the user.** Before committing, present the proposed commit: the branch, the exact list of files to stage and the full commit message. Commit only those files, with that message.
 - **Stage files explicitly** (`git add <path>`). Never use `git add -A`, `git add .` or `git commit -a`. Check that no `.env`, Terraform state, plan, kubeconfig or key is staged.
 - **Message format:** Conventional Commits, `type(scope): subject`, enforced in strict mode by pre-commit. Allowed types: `feat`, `fix`, `chore`, `docs`, `refactor`, `ci`, `build`, `security`. Subject in imperative mood, lowercase, no trailing period, 72 characters max. The body, when needed, explains why the change is made rather than what it does.
 - **Scope:** the module or area touched: `postgres`, `database`, `zitadel`, `backup`, `platform`, `k3s`, `shipper`, `deps`, `agents`. Omit it for changes spanning the whole repository.
-- **One commit, one logical change.** Do not mix formatting with functional changes. `.terraform.lock.hcl` and `flake.lock` are committed together with the change that updated them.
+- **One pull request, one logical change.** Pull requests are merged with **squash only**, so each one becomes a single commit on `main`. Do not mix formatting with functional changes in the same pull request. `.terraform.lock.hcl` and `flake.lock` are committed together with the change that updated them.
+- **Pull request title:** same format as a commit message (`type(scope): subject`). It becomes the commit message on `main`, and the CI checks it.
+- **Pull request description:** follows `.github/pull_request_template.md`, with every section filled in ("None" when a section does not apply).
 - **Hooks must pass.** Never use `--no-verify`. If gitleaks or the commit message check fails, fix the cause and propose the commit again.
 - **History:** never `--amend`, rebase or force push anything already pushed. Strict mode rejects merge and `fixup!` commits.
-- **Branches:** one branch per topic, named `<type>/<topic>` (for example `feat/zitadel`, `fix/provider-pinning`). No direct commits on `main`: changes reach it through a reviewed pull request.
+- **Branches:** one branch per topic, named `<type>/<topic>` (for example `feat/zitadel`, `fix/provider-pinning`). No direct commits on `main`: changes reach it through a pull request, merged once the *PR checks* workflow passes.
 - **Attribution:** a commit written by an agent ends with a `Co-Authored-By:` trailer naming the agent, so that its origin stays visible in the history.
 
 ## Long-running test suites and commands
@@ -122,6 +127,6 @@ This protocol applies to delegated agents as well as the controller. It changes 
 
 ## Before handing work back
 
-1. The checks listed in *What an agent may do* pass: `terraform fmt -check -recursive`, `terraform validate`, `gitleaks detect`.
+1. The checks listed in *What an agent may do* pass: `terraform fmt -check -recursive`, `terraform validate`, `gitleaks detect`. The *PR checks* workflow runs the same checks on the pull request.
 2. If the change touches the structure, the module list or a convention, propose the matching updates to README.md (*Repository structure*, *Roadmap*) and to this file.
 3. Summarise what changed and list what needs a `plan`, an apply or a commit, so the user can decide. If tests were run, include the report described in *Long-running test suites and commands*.
