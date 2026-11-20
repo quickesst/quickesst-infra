@@ -3,7 +3,9 @@
   "extends": ["config:recommended"],
   "timezone": "Europe/Paris",
   "labels": ["dependencies"],
-  "dependencyDashboard": true,
+  "dependencyDashboard": {
+    "enabled": true
+  },
   "minimumReleaseAge": "7 days",
   "internalChecksFilter": "strict",
   "automerge": false,
