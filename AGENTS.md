@@ -31,7 +31,7 @@ renovate.json               # dependency update policy
 .env.example                # required variables, no values
 .github/
   pull_request_template.md  # description template for every pull request
-  workflows/pr-checks.yml   # CI on pull requests: PR title, Terraform fmt/validate, gitleaks
+  workflows/pr-checks.yml   # CI on pull requests and main: PR title, Terraform fmt/validate, gitleaks
 CLAUDE.md                   # imports this file so that Claude Code loads it
 ```
 

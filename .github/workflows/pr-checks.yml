@@ -1,4 +1,5 @@
-# Checks run on every pull request targeting main.
+# Checks run on every pull request targeting main, and again on main after each merge.
+# The run on main also fills the caches that pull requests can then reuse.
 #
 # These jobs run on GitHub Actions, which is subject to US jurisdiction. They therefore
 # only read code that is already public and use no secret: no Terraform backend, no
@@ -11,17 +12,21 @@ on:
   pull_request:
     branches: [main]
     types: [opened, edited, reopened, synchronize]
+  push:
+    branches: [main]
 
 permissions:
   contents: read
 
 concurrency:
-  group: pr-checks-${{ github.event.pull_request.number }}
+  group: pr-checks-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   pr-title:
     name: PR title
+    # A push to main has no pull request title to check.
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
