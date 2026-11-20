@@ -1,0 +1,70 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+
+version: '3'
+silent: true
+
+vars:
+  PREFIX: "🐳 [Quickesst Shipper :: Infra Deploy]"
+  CONST_PROJECT_PREFIX: "qks"
+  BUCKET_REGION: "eu-west-3"
+
+  ENV: >-
+    {{- if .CLI_ARGS -}}
+      {{- index (splitArgs .CLI_ARGS) 0 -}}
+    {{- end -}}
+  TARGET_ENV: |-
+    {{- if has .ENV (list "production" "staging") -}}
+      {{- .ENV -}}
+    {{- else -}}
+      dev-{{- .ENV -}}
+    {{- end -}}
+  BUCKET_NAME: "{{.CONST_PROJECT_PREFIX}}-infra-{{.TARGET_ENV}}"
+  STATE_KEY: "{{.TARGET_ENV}}/tf_{{.TARGET_ENV}}.tfstate"
+
+  USAGE: |
+    Usage: task {{ .TASK }} [--force]
+      Example: task {{ .TASK }} jack 
+      Example: task {{ .TASK }} jack --force
+tasks:
+  default:
+    preconditions:
+      - sh: test -n "{{.ENV}}"
+        msg: |
+          Missing environment name. Please provide it and run again
+          {{.USAGE}}
+    cmds:
+      - echo "{{.PREFIX}} Deploying..."
+      - echo "{{.ROOT_DIR}}"
+      - task: terraform_init
+      - task: terraform_deploy
+      - 'echo "{{.PREFIX}} INFO :: [5/5] Infrastructure Apply Successful."'
+
+  terraform_init:
+    internal: true
+    vars:
+      BUCKET_ENDPOINT: '{{.S3_ENDPOINT | default ""}}'
+    cmds:
+      - 'echo "{{.PREFIX}} INFO :: [2/5] Running terraform Init..."'
+      - >
+        terraform init
+        -reconfigure
+        -backend-config="bucket={{.BUCKET_NAME}}"
+        -backend-config="key={{.STATE_KEY}}" 
+        -backend-config="endpoints={s3=\"{{.BUCKET_ENDPOINT}}\"}" 
+        -backend-config="use_lockfile=true" 
+        -backend-config="skip_credentials_validation=true" 
+        -backend-config="skip_region_validation=true" 
+        -backend-config="skip_requesting_account_id=true" 
+        -backend-config="use_path_style=true"
+
+  terraform_deploy:
+    vars:
+      AUTO_APPROVE: |-
+        {{- if eq .FORCE "true" -}}
+          -auto-approve
+        {{- end -}}
+    env:
+      TF_VAR_qks_current_env: "{{.TARGET_ENV}}"
+    cmds:
+      - 'echo "{{.PREFIX}} INFO :: [5/5] Running terraform Apply..."'
+      - terraform apply {{.AUTO_APPROVE}}

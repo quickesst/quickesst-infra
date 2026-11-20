@@ -55,7 +55,7 @@ The Terraform code and its deployment tasks are added topic by topic (see [Roadm
 main.tf                          # root module: providers and module composition
 modules/
   platform/                      # (planned) cert-manager, Cilium (self-managed clusters only)
-  postgres/                      # CloudNativePG operator, backup plugin, PostgreSQL instance
+  postgres/                      # CloudNativePG operator and PostgreSQL instance (image pinned by digest)
   database/                      # roles, credentials, pg_hba, databases
   zitadel/                       # Zitadel and its secrets
   backup/                        # object storage bucket, credentials, ObjectStore, scheduled backups
@@ -134,7 +134,7 @@ platform (CNI, cert-manager)
 - **Dependency updates with [Renovate](https://docs.renovatebot.com):** Renovate watches Terraform providers, Helm chart versions, container images and the Nix flake inputs, and opens a pull request for each update. A **minimum release age** delays every update by a few days after its publication, so that broken or compromised releases are usually withdrawn before they reach this repository. Each pull request goes through the full CI pipeline; updates to critical components (PostgreSQL, CloudNativePG, Zitadel, Cilium, Vault) are never merged automatically.
 - Every provider used by a module, root or child, is declared in its `required_providers` with an exact version (no `~>`, `>=` or missing constraint), kept identical across modules.
 - **No secrets in code, plans or logs.** Generated secrets are alphanumeric and long (64 characters), which avoids escaping issues in connection strings, YAML and shells.
-- **Critical resources must be protected** with `lifecycle { prevent_destroy = true }`: Zitadel masterkey, database role passwords, PostgreSQL cluster, backup bucket. Only the Zitadel masterkey is protected so far; the others still need it.
+- **Critical resources must be protected** with `lifecycle { prevent_destroy = true }`: Zitadel masterkey, database role passwords, PostgreSQL cluster, backup bucket. The Zitadel masterkey and the PostgreSQL cluster are protected so far; role passwords and the backup bucket still need it.
 - **Plans are reviewed before apply** in preprod and prod. Target: CI fails on any destroy or replacement of a protected resource (not in place yet, it needs a plan in CI).
 - One branch per topic, with a verifiable completion criterion in each ticket.
 - **Pull requests** are merged into `main` with squash only: one pull request is one logical change and becomes one commit. The title follows Conventional Commits and the description follows `.github/pull_request_template.md`.
@@ -182,7 +182,7 @@ kubectl get backups -n postgres
 - [x] Repository bootstrap (gitignore, gitleaks, CI lint)
 - [ ] CNI (Cilium)
 - [ ] Platform (cert-manager)
-- [ ] PostgreSQL instance
+- [x] PostgreSQL instance
 - [ ] Databases and roles
 - [ ] Zitadel
 - [ ] Backups
