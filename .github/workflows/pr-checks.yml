@@ -1,4 +1,5 @@
-# Checks run on every pull request targeting main.
+# Checks run on every pull request targeting main, and again on main after each merge.
+# The run on main also fills the caches that pull requests can then reuse.
 #
 # These jobs run on GitHub Actions, which is subject to US jurisdiction. They therefore
 # only read code that is already public and use no secret: no Terraform backend, no
@@ -11,17 +12,21 @@ on:
   pull_request:
     branches: [main]
     types: [opened, edited, reopened, synchronize]
+  push:
+    branches: [main]
 
 permissions:
   contents: read
 
 concurrency:
-  group: pr-checks-${{ github.event.pull_request.number }}
+  group: pr-checks-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   pr-title:
     name: PR title
+    # A push to main has no pull request title to check.
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
@@ -79,6 +84,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+
+      # pre-commit builds gitleaks from source (Go hook). Caching its environment means
+      # the build only happens once per gitleaks version, when .pre-commit-config.yaml changes.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
 
       # Runs the gitleaks hook from .pre-commit-config.yaml, so CI and local commits
       # always use the same gitleaks version (updated by Renovate).
