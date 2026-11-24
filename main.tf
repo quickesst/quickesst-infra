@@ -25,6 +25,10 @@ terraform {
       source  = "alekc/kubectl"
       version = "2.4.1"
     }
+    random = {
+      source  = "hashicorp/random"
+      version = "3.8.1"
+    }
   }
 
   backend "s3" {
@@ -58,4 +62,17 @@ provider "kubectl" {
 module "qks-postgres" {
   source          = "./modules/postgres/infra"
   qks_current_env = var.qks_current_env
+}
+
+module "qks-database" {
+  depends_on = [module.qks-postgres]
+
+  source = "./modules/database/infra"
+
+  qks_current_env        = var.qks_current_env
+  qks_database_cluster   = module.qks-postgres.cluster_name
+  qks_database_namespace = module.qks-postgres.namespace
+  qks_database_values = {
+    zitadel = "zitadel"
+  }
 }
