@@ -51,7 +51,7 @@ resource "helm_release" "qks_zitadel" {
   namespace  = kubernetes_namespace_v1.qks_zitadel_namespace.metadata[0].name
   repository = "https://charts.zitadel.com"
   chart      = "zitadel"
-  version    = "10.4.0"
+  version    = "10.5.0"
   wait       = true
 
   values = [yamlencode({
