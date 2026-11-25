@@ -52,33 +52,34 @@ A later move to **Scaleway Kosmos** (multi-provider nodes) is planned for resili
 The Terraform code and its deployment tasks are added topic by topic (see [Roadmap](#roadmap)). Entries marked *(planned)* are not implemented yet.
 
 ```
-main.tf                          # root module: providers and module composition
-modules/
+main.tf                          # root module: variables, providers, S3 backend, module composition
+modules/                         # one Terraform module per topic, in modules/<topic>/infra/
   platform/                      # (planned) cert-manager, Cilium (self-managed clusters only)
-  postgres/                      # CloudNativePG operator and PostgreSQL instance (image pinned by digest)
-  database/                      # roles, credentials, pg_hba, databases
-  zitadel/                       # Zitadel and its secrets
-  backup/                        # object storage bucket, credentials, ObjectStore, scheduled backups
+  postgres/                      # CloudNativePG operator and PostgreSQL cluster (image pinned by digest)
+  database/                      # PostgreSQL roles, passwords, pg_hba, databases
+  zitadel/                       # (planned) Zitadel, its masterkey and database credentials
+  backup/                        # (planned) object storage bucket, scoped backup user, ObjectStore, scheduled backups
 scripts/
   shipper/
-    shipper-infra-deploy.yaml    # Task definitions for infrastructure deployment
-Taskfile.yml                     # Task entry point
-flake.nix                        # Nix development shell with pinned tooling
-flake.lock                       # exact versions of the Nix inputs (committed)
-.terraform.lock.hcl              # exact provider versions and checksums
-.pre-commit-config.yaml          # pre-commit hooks (gitleaks, commit message check)
-.github/
-  pull_request_template.md       # description template for pull requests
-  workflows/pr-checks.yml        # CI on pull requests and main (no secrets, see Conventions)
-.env.example                     # required environment variables (no values)
-.gitignore                       # excludes secrets, Terraform state and local artefacts
-.envrc                           # direnv: loads the Nix development shell on entering the directory
+    shipper-infra-deploy.yaml    # Task definitions for deployment (init + apply)
+Taskfile.yml                     # Task entry point, loads .env
 k3s/                             # k3s server settings for self-managed clusters (dev, staging)
   config.yaml                    # installed as /etc/rancher/k3s/config.yaml
   audit-policy.yaml              # Kubernetes API audit policy
   pod-security.yaml              # Pod Security Admission defaults
+flake.nix                        # Nix development shell with pinned tooling (terraform, kubectl, helm, k3d, task, gitleaks, gh...)
+flake.lock                       # exact versions of the Nix inputs
+.envrc                           # direnv: loads the Nix development shell on entering the directory
+.terraform.lock.hcl              # exact provider versions and checksums
+.pre-commit-config.yaml          # pre-commit hooks: gitleaks, commit message check
 renovate.json                    # dependency update policy (Renovate)
-AGENTS.md                        # instructions for AI coding agents working in this repository
+.env.example                     # required environment variables, no values
+.gitignore                       # excludes secrets, Terraform state and local artefacts
+.github/
+  pull_request_template.md       # description template for pull requests
+  workflows/pr-checks.yml        # CI on pull requests and main: PR title, Terraform fmt/validate, gitleaks (no secrets)
+README.md                        # reference documentation for humans
+AGENTS.md                        # instructions for AI agents working in this repository
 CLAUDE.md                        # imports AGENTS.md so that Claude Code loads it
 ```
 
