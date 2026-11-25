@@ -12,52 +12,82 @@ vars:
     {{- if .CLI_ARGS -}}
       {{- index (splitArgs .CLI_ARGS) 0 -}}
     {{- end -}}
+  # Shared environments keep their name; any other name is a personal dev environment.
   TARGET_ENV: |-
-    {{- if has .ENV (list "production" "staging") -}}
+    {{- if has .ENV (list "production" "preprod" "staging") -}}
       {{- .ENV -}}
     {{- else -}}
       dev-{{- .ENV -}}
     {{- end -}}
   BUCKET_NAME: "{{.CONST_PROJECT_PREFIX}}-infra-{{.TARGET_ENV}}"
   STATE_KEY: "{{.TARGET_ENV}}/tf_{{.TARGET_ENV}}.tfstate"
+  FORCE: >-
+    {{- if .CLI_ARGS -}}
+      {{- if has "--force" (splitArgs .CLI_ARGS) -}}
+        true
+      {{- end -}}
+    {{- end -}}
 
   USAGE: |
-    Usage: task {{ .TASK }} [--force]
-      Example: task {{ .TASK }} jack 
-      Example: task {{ .TASK }} jack --force
+    Usage: task {{ .TASK }} -- <env> [--force]
+      <env>    production, preprod, staging, or a personal name (deployed as dev-<name>)
+      --force  apply without confirmation (-auto-approve): dev and staging only
+    Example: task {{ .TASK }} -- jack
+    Example: task {{ .TASK }} -- staging --force
 tasks:
   default:
     preconditions:
-      - sh: test -n "{{.ENV}}"
+      - sh: test -n {{shellQuote .ENV}}
         msg: |
           Missing environment name. Please provide it and run again
           {{.USAGE}}
+      # The name ends up in shell commands and in the bucket name: lowercase letters,
+      # digits and dashes only. "dev-" is added by the task, never typed.
+      - sh: >-
+          printf '%s' {{shellQuote .ENV}} | grep -Eq '^[a-z0-9][a-z0-9-]{0,40}$'
+          && case {{shellQuote .ENV}} in dev-*) false ;; *) true ;; esac
+        msg: |
+          Invalid environment name: lowercase letters, digits and dashes, without the "dev-" prefix.
+          {{.USAGE}}
+      # The state and the backend credentials travel to S3: HTTPS is required outside
+      # personal dev environments, whose backend may be a local MinIO without TLS.
+      - sh: >-
+          case "$S3_ENDPOINT" in
+          https://?*) true ;;
+          http://?*) case {{shellQuote .TARGET_ENV}} in dev-*) true ;; *) false ;; esac ;;
+          *) false ;;
+          esac
+        msg: "S3_ENDPOINT must be the full URL of the S3 API, in HTTPS outside dev-* environments (see .env.example)."
+      # Preprod and production changes always need a human approval.
+      - sh: >-
+          {{if .FORCE}}
+          case {{shellQuote .TARGET_ENV}} in dev-*|staging) true ;; *) false ;; esac
+          {{else}}true{{end}}
+        msg: "--force (-auto-approve) is refused for preprod and production: their apply needs a human approval."
     cmds:
-      - echo "{{.PREFIX}} Deploying..."
-      - echo "{{.ROOT_DIR}}"
+      - 'echo "{{.PREFIX}} INFO :: [1/3] Target: environment {{.TARGET_ENV}}, bucket {{.BUCKET_NAME}}, kube context $(kubectl --kubeconfig "$HOME/.kube/config" config current-context)"'
       - task: terraform_init
       - task: terraform_deploy
-      - 'echo "{{.PREFIX}} INFO :: [5/5] Infrastructure Apply Successful."'
+      - 'echo "{{.PREFIX}} INFO :: Infrastructure apply successful."'
 
   terraform_init:
     internal: true
-    vars:
-      BUCKET_ENDPOINT: '{{.S3_ENDPOINT | default ""}}'
     cmds:
-      - 'echo "{{.PREFIX}} INFO :: [2/5] Running terraform Init..."'
+      - 'echo "{{.PREFIX}} INFO :: [2/3] Running terraform init..."'
       - >
         terraform init
         -reconfigure
         -backend-config="bucket={{.BUCKET_NAME}}"
-        -backend-config="key={{.STATE_KEY}}" 
-        -backend-config="endpoints={s3=\"{{.BUCKET_ENDPOINT}}\"}" 
-        -backend-config="use_lockfile=true" 
-        -backend-config="skip_credentials_validation=true" 
-        -backend-config="skip_region_validation=true" 
-        -backend-config="skip_requesting_account_id=true" 
+        -backend-config="key={{.STATE_KEY}}"
+        -backend-config="endpoints={s3=\"$S3_ENDPOINT\"}"
+        -backend-config="use_lockfile=true"
+        -backend-config="skip_credentials_validation=true"
+        -backend-config="skip_region_validation=true"
+        -backend-config="skip_requesting_account_id=true"
         -backend-config="use_path_style=true"
 
   terraform_deploy:
+    internal: true
     vars:
       AUTO_APPROVE: |-
         {{- if eq .FORCE "true" -}}
@@ -66,5 +96,5 @@ tasks:
     env:
       TF_VAR_qks_current_env: "{{.TARGET_ENV}}"
     cmds:
-      - 'echo "{{.PREFIX}} INFO :: [5/5] Running terraform Apply..."'
+      - 'echo "{{.PREFIX}} INFO :: [3/3] Running terraform apply..."'
       - terraform apply {{.AUTO_APPROVE}}
