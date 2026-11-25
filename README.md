@@ -126,10 +126,10 @@ platform (CNI, cert-manager)
 2. Deploy:
 
    ```bash
-   task shipper:default
+   task shipper:default -- <env>
    ```
 
-   The deployment script sets the target environment (`TF_VAR_qks_current_env`).
+   The deployment script sets the target environment (`TF_VAR_qks_current_env`). `--force` applies without confirmation (`-auto-approve`); the task only allows it on a `dev-*` environment with the local k3d context `k3d-quickesst`.
 
 ## Conventions
 

@@ -20,11 +20,17 @@ vars:
     {{- end -}}
   BUCKET_NAME: "{{.CONST_PROJECT_PREFIX}}-infra-{{.TARGET_ENV}}"
   STATE_KEY: "{{.TARGET_ENV}}/tf_{{.TARGET_ENV}}.tfstate"
+  FORCE: >-
+    {{- if .CLI_ARGS -}}
+      {{- if has "--force" (splitArgs .CLI_ARGS) -}}
+        true
+      {{- end -}}
+    {{- end -}}
 
   USAGE: |
-    Usage: task {{ .TASK }} [--force]
-      Example: task {{ .TASK }} jack 
-      Example: task {{ .TASK }} jack --force
+    Usage: task {{ .TASK }} -- <env> [--force]
+      Example: task {{ .TASK }} -- jack
+      Example: task {{ .TASK }} -- jack --force   (local k3d cluster only)
 tasks:
   default:
     preconditions:
@@ -32,6 +38,14 @@ tasks:
         msg: |
           Missing environment name. Please provide it and run again
           {{.USAGE}}
+      # -auto-approve is only allowed on the local k3d cluster, never on a shared environment.
+      # The kubeconfig is the one the Terraform providers use.
+      - sh: >-
+          {{if .FORCE}}
+          test "$(kubectl --kubeconfig "$HOME/.kube/config" config current-context)" = "k3d-quickesst"
+          && case "{{.TARGET_ENV}}" in dev-*) true ;; *) false ;; esac
+          {{else}}true{{end}}
+        msg: "--force (-auto-approve) is only allowed on a dev-* environment with the local k3d context k3d-quickesst."
     cmds:
       - echo "{{.PREFIX}} Deploying..."
       - echo "{{.ROOT_DIR}}"
@@ -58,6 +72,7 @@ tasks:
         -backend-config="use_path_style=true"
 
   terraform_deploy:
+    internal: true
     vars:
       AUTO_APPROVE: |-
         {{- if eq .FORCE "true" -}}
