@@ -69,7 +69,7 @@ CLAUDE.md                        # imports AGENTS.md so that Claude Code loads i
 
 - `task shipper:default -- <env>` runs `terraform init` (S3 backend, bucket `qks-infra-<target>`) then `terraform apply`. `production`, `preprod` and `staging` are used as is; any other name becomes `dev-<name>` (personal dev environments).
 - `TF_VAR_qks_current_env` is set by the deployment task; never hardcode an environment in a module.
-- Local work happens in the k3d cluster `quickesst` created by the Nix shell, using `~/.kube/config`.
+- Local work happens in the k3d cluster `quickesst` created by the Nix shell, using `~/.kube/config` by default (`TF_VAR_qks_kubeconfig_path` overrides it).
 
 ## 2. Permissions
 

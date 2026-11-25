@@ -117,6 +117,7 @@ platform (CNI, cert-manager)
    | Variable | Used by |
          |---|---|
    | `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | Terraform state backend (S3-compatible) |
+   | `TF_VAR_qks_kubeconfig_path` | Optional: kubeconfig used by Terraform (default `~/.kube/config`) |
    | `S3_ENDPOINT` | Full URL of the S3 API of the state backend (HTTPS required outside `dev-*`) |
    | `MINIO_USER` / `MINIO_PASSWORD` | MinIO provider (bucket and user management) |
    | `TF_VAR_qks_ingress_class_name` | Ingress class of the cluster ingress controller (`traefik` on k3s) |

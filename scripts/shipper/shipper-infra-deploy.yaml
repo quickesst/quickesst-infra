@@ -65,7 +65,7 @@ tasks:
           {{else}}true{{end}}
         msg: "--force (-auto-approve) is refused for preprod and production: their apply needs a human approval."
     cmds:
-      - 'echo "{{.PREFIX}} INFO :: [1/3] Target: environment {{.TARGET_ENV}}, bucket {{.BUCKET_NAME}}, kube context $(kubectl --kubeconfig "$HOME/.kube/config" config current-context)"'
+      - 'echo "{{.PREFIX}} INFO :: [1/3] Target: environment {{.TARGET_ENV}}, bucket {{.BUCKET_NAME}}, kube context $(kubectl --kubeconfig "${TF_VAR_qks_kubeconfig_path:-$HOME/.kube/config}" config current-context)"'
       - task: terraform_init
       - task: terraform_deploy
       - 'echo "{{.PREFIX}} INFO :: Infrastructure apply successful."'
