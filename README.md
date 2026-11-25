@@ -57,7 +57,7 @@ modules/                         # one Terraform module per topic, in modules/<t
   platform/                      # (planned) cert-manager, Cilium (self-managed clusters only)
   postgres/                      # CloudNativePG operator and PostgreSQL cluster (image pinned by digest)
   database/                      # PostgreSQL roles, passwords, pg_hba, databases
-  zitadel/                       # (planned) Zitadel, its masterkey and database credentials
+  zitadel/                       # Zitadel, its masterkey and database credentials
   backup/                        # (planned) object storage bucket, scoped backup user, ObjectStore, scheduled backups
 scripts/
   shipper/
@@ -118,6 +118,8 @@ platform (CNI, cert-manager)
          |---|---|
    | `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | Terraform state backend (S3-compatible) |
    | `MINIO_USER` / `MINIO_PASSWORD` | MinIO provider (bucket and user management) |
+   | `TF_VAR_qks_ingress_class_name` | Ingress class of the cluster ingress controller (`traefik` on k3s) |
+   | `TF_VAR_qks_zitadel_external_domain` | Public domain of Zitadel (`zitadel.localhost` locally), recorded when the instance is created |
 
    `.env` is loaded by Task and must never be committed. In CI, the same variables come from the CI secret store.
 
@@ -185,7 +187,7 @@ kubectl get backups -n postgres
 - [ ] Platform (cert-manager)
 - [x] PostgreSQL instance
 - [x] Databases and roles
-- [ ] Zitadel
+- [x] Zitadel
 - [ ] Backups
 - [ ] Vault and External Secrets
 - [ ] Network policies (default deny)
