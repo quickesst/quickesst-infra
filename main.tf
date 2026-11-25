@@ -7,6 +7,12 @@ variable "qks_current_env" {
   description = "Current environment"
 }
 
+variable "qks_kubeconfig_path" {
+  type        = string
+  description = "Path of the kubeconfig used by the Kubernetes, Helm and kubectl providers"
+  default     = "~/.kube/config"
+}
+
 variable "qks_ingress_class_name" {
   type        = string
   description = "Ingress class of the cluster ingress controller (traefik on k3s)"
@@ -52,17 +58,17 @@ terraform {
 # =============================================================================
 
 provider "kubernetes" {
-  config_path = "~/.kube/config"
+  config_path = var.qks_kubeconfig_path
 }
 
 provider "helm" {
   kubernetes = {
-    config_path = "~/.kube/config"
+    config_path = var.qks_kubeconfig_path
   }
 }
 
 provider "kubectl" {
-  config_path = "~/.kube/config"
+  config_path = var.qks_kubeconfig_path
 }
 
 # =============================================================================
