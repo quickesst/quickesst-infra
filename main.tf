@@ -7,6 +7,16 @@ variable "qks_current_env" {
   description = "Current environment"
 }
 
+variable "qks_ingress_class_name" {
+  type        = string
+  description = "Ingress class of the cluster ingress controller (traefik on k3s)"
+}
+
+variable "qks_zitadel_external_domain" {
+  type        = string
+  description = "Public domain of Zitadel (for example auth.example.com), recorded when the instance is created"
+}
+
 # =============================================================================
 # ================================== TF CONF ==================================
 # =============================================================================
@@ -75,4 +85,18 @@ module "qks-database" {
   qks_database_values = {
     zitadel = "zitadel"
   }
+}
+
+module "qks-zitadel" {
+  depends_on = [module.qks-database]
+
+  source = "./modules/zitadel/infra"
+
+  qks_current_env                = var.qks_current_env
+  qks_zitadel_pg_cluster         = module.qks-postgres.cluster_name
+  qks_zitadel_pg_namespace       = module.qks-postgres.namespace
+  qks_zitadel_pg_secret_name     = module.qks-database.qks_postgres_role_secret_names["zitadel"]
+  qks_zitadel_pg_db_name         = "zitadel"
+  qks_zitadel_external_domain    = var.qks_zitadel_external_domain
+  qks_zitadel_ingress_class_name = var.qks_ingress_class_name
 }

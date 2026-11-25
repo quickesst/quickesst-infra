@@ -39,7 +39,7 @@ modules/                         # one Terraform module per topic, in modules/<t
   platform/                      # (planned) cert-manager, Cilium (self-managed clusters only)
   postgres/                      # CloudNativePG operator and PostgreSQL cluster (image pinned by digest)
   database/                      # PostgreSQL roles, passwords, pg_hba, databases
-  zitadel/                       # (planned) Zitadel, its masterkey and database credentials
+  zitadel/                       # Zitadel, its masterkey and database credentials
   backup/                        # (planned) object storage bucket, scoped backup user, ObjectStore, scheduled backups
 scripts/
   shipper/
