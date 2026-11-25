@@ -117,6 +117,7 @@ platform (CNI, cert-manager)
    | Variable | Used by |
          |---|---|
    | `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | Terraform state backend (S3-compatible) |
+   | `S3_ENDPOINT` | Full URL of the S3 API of the state backend (HTTPS required outside `dev-*`) |
    | `MINIO_USER` / `MINIO_PASSWORD` | MinIO provider (bucket and user management) |
    | `TF_VAR_qks_ingress_class_name` | Ingress class of the cluster ingress controller (`traefik` on k3s) |
    | `TF_VAR_qks_zitadel_external_domain` | Public domain of Zitadel (`zitadel.localhost` locally), recorded when the instance is created |
@@ -129,7 +130,7 @@ platform (CNI, cert-manager)
    task shipper:default -- <env>
    ```
 
-   The deployment script sets the target environment (`TF_VAR_qks_current_env`). `--force` applies without confirmation (`-auto-approve`); the task only allows it on a `dev-*` environment with the local k3d context `k3d-quickesst`.
+   The deployment script sets the target environment (`TF_VAR_qks_current_env`). `<env>` is `production`, `preprod`, `staging`, or a personal name deployed as `dev-<name>`. `--force` applies without confirmation (`-auto-approve`): it is allowed for `dev-*` and `staging`, and refused for `preprod` and `production`, whose apply always needs a human approval. The task prints the target kube context before running.
 
 ## Conventions
 

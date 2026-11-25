@@ -67,7 +67,7 @@ CLAUDE.md                        # imports AGENTS.md so that Claude Code loads i
 
 ### Environments and deployment
 
-- `task shipper:default -- <env>` runs `terraform init` (S3 backend, bucket `qks-infra-<target>`) then `terraform apply`. `production` and `staging` are used as is; any other name becomes `dev-<name>` (personal dev environments).
+- `task shipper:default -- <env>` runs `terraform init` (S3 backend, bucket `qks-infra-<target>`) then `terraform apply`. `production`, `preprod` and `staging` are used as is; any other name becomes `dev-<name>` (personal dev environments).
 - `TF_VAR_qks_current_env` is set by the deployment task; never hardcode an environment in a module.
 - Local work happens in the k3d cluster `quickesst` created by the Nix shell, using `~/.kube/config`.
 
@@ -93,7 +93,7 @@ CLAUDE.md                        # imports AGENTS.md so that Claude Code loads i
 
 ### Never
 
-- `-auto-approve` or `--force`, except `task shipper:default -- <env> --force` on the local k3d cluster, which the task enforces. That command still needs the explicit yes required for any `task shipper:*`.
+- `-auto-approve` or `--force`, except `task shipper:default -- <env> --force` on the local k3d cluster (current context `k3d-quickesst`), checked by the agent before running it. That command still needs the explicit yes required for any `task shipper:*`.
 - Anything listed as forbidden in [Principles](#principles), [Code](#3-code) and [Git and pull requests](#5-git-and-pull-requests): each prohibition is stated next to the rule it protects.
 
 ## 3. Code
